@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      body { font-family: Arial, sans-serif; padding: 20px; }
+      h1 { text-align: center; color: #2a6099; }
+      .boutons { text-align: center; margin: 20px 0; }
+      button { padding: 10px 20px; margin: 5px; cursor: pointer; background: #2a6099; color: white; border: none; border-radius: 5px; font-weight: bold; }
+      button:hover { background: #1a4a7a; }
+      #zone-recherche { text-align: center; margin-bottom: 20px; display: none; }
+      #inputRecherche { padding: 10px; width: 300px; border-radius: 5px; border: 1px solid #ccc; }
+      .container { display: flex; align-items: flex-start; margin-top: 20px; display: none; }
+      .label-vertical { writing-mode: vertical-rl; transform: rotate(180deg); background: #2a6099; color: white; padding: 20px 10px; font-size: 20px; font-weight: bold; text-align: center; border-radius: 5px 0 0 5px; }
+      table { width: 100%; border-collapse: collapse; background: white; margin-top: 10px; }
+      th { background-color: #f2f2f2; padding: 12px; border: 1px solid #ccc; text-align: left; }
+      td { border: 1px solid #ccc; padding: 10px; }
+    </style>
+  </head>
+  <body>
+    <h1>IMPRIMES ET LIENS INTRANET SDIS33</h1>
+    <div class="boutons" id="menu-familles"></div>
+    <div id="zone-recherche">
+      <input type="text" id="inputRecherche" onkeyup="filtrer()" placeholder="Rechercher...">
+    </div>
+    <div id="contenu"></div>
+
+    <script>
+      // Chargement initial
+      google.script.run.withSuccessHandler(function(data) {
+        var familles = ["GLM", "GSIC", "GPAT", "GAPC", "SDS", "GTNE", "CODIS", "CASB"];
+        var menu = document.getElementById('menu-familles');
+        var contenu = document.getElementById('contenu');
+
+        familles.forEach(function(f) {
+          var btn = document.createElement('button');
+          btn.innerText = f;
+          btn.onclick = function() { afficher(f); };
+          menu.appendChild(btn);
+          var div = document.createElement('div');
+          div.id = "container-" + f;
+          div.className = "container";
+          div.innerHTML = '<div class="label-vertical">' + f + '</div><table id="table-' + f + '"><tr><th>Nom</th><th>Instruction</th></tr></table>';
+          contenu.appendChild(div);
+          var table = div.querySelector('table');
+          data.forEach(function(ligne) {
+            if (ligne[3] === f) table.innerHTML += '<tr><td><a href="'+ligne[1]+'" target="_blank">'+ligne[0]+'</a></td><td>'+ligne[2]+'</td></tr>';
+          });
+        });
+
+        // Boutons Menu
+        var btns = [
+          {txt: "ANNUAIRE", col: "#d9534f", fn: chargerAnnuaire},
+          {txt: "VÉHICULES", col: "#5cb85c", fn: chargerVehicules},
+          {txt: "INVENTAIRES", col: "#f0ad4e", fn: chargerInventaires}
+        ];
+        btns.forEach(function(b) {
+          var btn = document.createElement('button');
+          btn.innerText = b.txt;
+          btn.style.backgroundColor = b.col;
+          btn.onclick = b.fn;
+          menu.appendChild(btn);
+        });
+      }).getDonnees();
+
+      function effacerTout() {
+        document.querySelectorAll('.container').forEach(c => c.style.display = 'none');
+        document.getElementById('zone-recherche').style.display = 'none';
+        document.getElementById('inputRecherche').value = '';
+        ['table-annuaire', 'table-vehicules', 'table-inventaires'].forEach(function(id) {
+          var el = document.getElementById(id);
+          if(el) el.remove();
+        });
+      }
+
+      function afficher(famille) {
+        effacerTout();
+        document.getElementById('container-' + famille).style.display = 'flex';
+      }
+
+      function chargerAnnuaire() {
+        effacerTout();
+        document.getElementById('zone-recherche').style.display = 'block';
+        google.script.run.withSuccessHandler(function(data) {
+          var table = document.createElement('table');
+          table.id = "table-annuaire";
+          table.innerHTML = '<tr><th>Nom</th><th>Prénom</th><th>Abrégé</th><th>Portable</th><th>Matricule</th></tr>';
+          data.forEach(function(l) { table.innerHTML += '<tr><td>'+l[0]+'</td><td>'+l[1]+'</td><td>'+l[2]+'</td><td>'+l[3]+'</td><td>'+l[4]+'</td></tr>'; });
+          document.getElementById('contenu').appendChild(table);
+        }).getAnnuaire();
+      }
+
+      function chargerVehicules() {
+        effacerTout();
+        document.getElementById('zone-recherche').style.display = 'block';
+        google.script.run.withSuccessHandler(function(data) {
+          var table = document.createElement('table');
+          table.id = "table-vehicules";
+          table.innerHTML = '<tr><th>Code</th><th>Immat</th><th>N° Ident</th><th>Marque</th><th>Modèle</th></tr>';
+          data.forEach(function(l) { table.innerHTML += '<tr><td>'+l[0]+'</td><td>'+l[1]+'</td><td>'+l[2]+'</td><td>'+l[3]+'</td><td>'+l[4]+'</td></tr>'; });
+          document.getElementById('contenu').appendChild(table);
+        }).getVehicules();
+      }
+
+      function chargerInventaires() {
+        effacerTout();
+        document.getElementById('zone-recherche').style.display = 'block';
+        google.script.run.withSuccessHandler(function(data) {
+          var table = document.createElement('table');
+          table.id = "table-inventaires";
+          table.innerHTML = '<tr><th>Nom</th><th>Immat</th><th>QR CODE</th></tr>';
+          data.forEach(function(l) { 
+            var qr = l[2] && l[2].toString().startsWith('http') ? '<img src="'+l[2]+'" style="width:80px; height:80px;">' : (l[2] || "");
+            table.innerHTML += '<tr><td>'+l[0]+'</td><td>'+l[1]+'</td><td>'+qr+'</td></tr>'; 
+          });
+          document.getElementById('contenu').appendChild(table);
+        }).getInventaires();
+      }
+
+      function filtrer() {
+        var filter = document.getElementById("inputRecherche").value.toUpperCase();
+        var table = document.querySelector('#table-annuaire') || document.querySelector('#table-vehicules') || document.querySelector('#table-inventaires');
+        if (!table) return;
+        var tr = table.getElementsByTagName("tr");
+        for (var i = 1; i < tr.length; i++) {
+          var show = false;
+          var td = tr[i].getElementsByTagName("td");
+          for (var j = 0; j < td.length; j++) {
+            if (td[j].innerText.toUpperCase().indexOf(filter) > -1) show = true;
+          }
+          tr[i].style.display = show ? "" : "none";
+        }
+      }
+    </script>
+  </body>
+</html>
