@@ -1,9 +1,11 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <base target="_top">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IMPRIMES ET LIENS INTRANET SDIS33</title>
     <style>
-      body { font-family: Arial, sans-serif; padding: 20px; }
+      body { font-family: Arial, sans-serif; padding: 20px; background-color: #fafafa; }
       h1 { text-align: center; color: #2a6099; }
       .boutons { text-align: center; margin: 20px 0; }
       button { padding: 10px 20px; margin: 5px; cursor: pointer; background: #2a6099; color: white; border: none; border-radius: 5px; font-weight: bold; }
@@ -15,6 +17,7 @@
       table { width: 100%; border-collapse: collapse; background: white; margin-top: 10px; }
       th { background-color: #f2f2f2; padding: 12px; border: 1px solid #ccc; text-align: left; }
       td { border: 1px solid #ccc; padding: 10px; }
+      .loading { text-align: center; color: #666; font-style: italic; display: none; }
     </style>
   </head>
   <body>
@@ -23,11 +26,32 @@
     <div id="zone-recherche">
       <input type="text" id="inputRecherche" onkeyup="filtrer()" placeholder="Rechercher...">
     </div>
+    <div id="loading-msg" class="loading">Chargement des données...</div>
     <div id="contenu"></div>
 
     <script>
-      // Chargement initial
-      google.script.run.withSuccessHandler(function(data) {
+      // ⚠️ METTEZ VOTRE URL APPS SCRIPT CI-DESSOUS
+      const API_URL = "https://script.google.com/macros/s/AKfycbwMcT510GIDRXrXkcnG94Csi-iJvPgUTYj7Q5cA0fU/dev";
+
+      // Fonction générique pour appeler votre base de données Google Sheets depuis GitHub
+      async function fetchData(action) {
+        document.getElementById('loading-msg').style.display = 'block';
+        try {
+          const response = await fetch(`${API_URL}?action=${action}`);
+          const data = await response.json();
+          document.getElementById('loading-msg').style.display = 'none';
+          return data;
+        } catch (error) {
+          console.error("Erreur de chargement :", error);
+          document.getElementById('loading-msg').innerText = "Erreur de connexion aux données.";
+        }
+      }
+
+      // Chargement initial au démarrage de la page GitHub
+      async function initialiser() {
+        const data = await fetchData('getDonnees');
+        if (!data) return;
+
         var familles = ["GLM", "GSIC", "GPAT", "GAPC", "SDS", "GTNE", "CODIS", "CASB"];
         var menu = document.getElementById('menu-familles');
         var contenu = document.getElementById('contenu');
@@ -48,7 +72,7 @@
           });
         });
 
-        // Boutons Menu
+        // Boutons Menu secondaires
         var btns = [
           {txt: "ANNUAIRE", col: "#d9534f", fn: chargerAnnuaire},
           {txt: "VÉHICULES", col: "#5cb85c", fn: chargerVehicules},
@@ -61,7 +85,7 @@
           btn.onclick = b.fn;
           menu.appendChild(btn);
         });
-      }).getDonnees();
+      }
 
       function effacerTout() {
         document.querySelectorAll('.container').forEach(c => c.style.display = 'none');
@@ -78,43 +102,50 @@
         document.getElementById('container-' + famille).style.display = 'flex';
       }
 
-      function chargerAnnuaire() {
+      async function chargerAnnuaire() {
         effacerTout();
         document.getElementById('zone-recherche').style.display = 'block';
-        google.script.run.withSuccessHandler(function(data) {
-          var table = document.createElement('table');
-          table.id = "table-annuaire";
-          table.innerHTML = '<tr><th>Nom</th><th>Prénom</th><th>Abrégé</th><th>Portable</th><th>Matricule</th></tr>';
-          data.forEach(function(l) { table.innerHTML += '<tr><td>'+l[0]+'</td><td>'+l[1]+'</td><td>'+l[2]+'</td><td>'+l[3]+'</td><td>'+l[4]+'</td></tr>'; });
-          document.getElementById('contenu').appendChild(table);
-        }).getAnnuaire();
+        const data = await fetchData('getAnnuaire');
+        if (!data) return;
+
+        var table = document.createElement('table');
+        table.id = "table-annuaire";
+        table.innerHTML = '<tr><th>Nom</th><th>Prénom</th><th>Abrégé</th><th>Portable</th><th>Matricule</th></tr>';
+        data.forEach(function(l) { table.innerHTML += '<tr><td>'+l[0]+'</td><td>'+l[1]+'</td><td>'+l[2]+'</td><td>'+l[3]+'</td><td>'+l[4]+'</td></tr>'; });
+        document.getElementById('contenu').appendChild(table);
       }
 
-      function chargerVehicules() {
+      async function chargerVehicules() {
         effacerTout();
         document.getElementById('zone-recherche').style.display = 'block';
-        google.script.run.withSuccessHandler(function(data) {
-          var table = document.createElement('table');
-          table.id = "table-vehicules";
-          table.innerHTML = '<tr><th>Code</th><th>Immat</th><th>N° Ident</th><th>Marque</th><th>Modèle</th></tr>';
-          data.forEach(function(l) { table.innerHTML += '<tr><td>'+l[0]+'</td><td>'+l[1]+'</td><td>'+l[2]+'</td><td>'+l[3]+'</td><td>'+l[4]+'</td></tr>'; });
-          document.getElementById('contenu').appendChild(table);
-        }).getVehicules();
+        const data = await fetchData('getVehicules');
+        if (!data) return;
+
+        var table = document.createElement('table');
+        table.id = "table-vehicules";
+        table.innerHTML = '<tr><th>Code</th><th>Immat</th><th>N° Ident</th><th>Marque</th><th>Modèle</th></tr>';
+        data.forEach(function(l) { table.innerHTML += '<tr><td>'+l[0]+'</td><td>'+l[1]+'</td><td>'+l[2]+'</td><td>'+l[3]+'</td><td>'+l[4]+'</td></tr>'; });
+        document.getElementById('contenu').appendChild(table);
       }
 
-      function chargerInventaires() {
+      async function chargerInventaires() {
         effacerTout();
         document.getElementById('zone-recherche').style.display = 'block';
-        google.script.run.withSuccessHandler(function(data) {
-          var table = document.createElement('table');
-          table.id = "table-inventaires";
-          table.innerHTML = '<tr><th>Nom</th><th>Immat</th><th>QR CODE</th></tr>';
-          data.forEach(function(l) { 
-            var qr = l[2] && l[2].toString().startsWith('http') ? '<img src="'+l[2]+'" style="width:80px; height:80px;">' : (l[2] || "");
-            table.innerHTML += '<tr><td>'+l[0]+'</td><td>'+l[1]+'</td><td>'+qr+'</td></tr>'; 
-          });
-          document.getElementById('contenu').appendChild(table);
-        }).getInventaires();
+        const data = await fetchData('getInventaires');
+        if (!data) return;
+
+        var table = document.createElement('table');
+        table.id = "table-inventaires";
+        table.innerHTML = '<tr><th>Nom</th><th>Immat</th><th>QR CODE</th></tr>';
+        data.forEach(function(l) { 
+          var qr = l[2] && l[2].toString().startsWith('http') ? '<img src="'+l[2]+'" style="width:80px; height:80px;">' : (l[2] || "");
+          table.innerHTML += '<tr><td>'+l[0]+'</td><td>'+l[1]+'</td><td>'+qr+'</td></tr>'; 
+        });
+        document.getElementById('contenu').appendChild(table);
+      }
+
+      function filter() { // Alias pour assurer la compatibilité
+        filtrer();
       }
 
       function filtrer() {
@@ -131,6 +162,9 @@
           tr[i].style.display = show ? "" : "none";
         }
       }
+
+      // Lancement automatique au chargement
+      window.onload = initialiser;
     </script>
   </body>
 </html>
